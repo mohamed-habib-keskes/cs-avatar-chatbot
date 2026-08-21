@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Byte — Reasoning Core</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --void: #05070d;
+    --panel: rgba(10,14,24,0.72);
+    --panel-solid: #0a0e1a;
+    --border: rgba(148,180,220,0.12);
+    --border-bright: rgba(45,212,191,0.4);
+    --cyan: #2dd4bf;
+    --violet: #a78bfa;
+    --amber: #fbbf24;
+    --rose: #fb7185;
+    --text: #e7edf7;
+    --text-dim: #7d8ba3;
+    --text-faint: #48546b;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  body{
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(45,212,191,0.06), transparent 60%),
+      var(--void);
+    color: var(--text);
+    font-family:'Inter', system-ui, sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+
+  .app-card{
+    width:460px;
+    max-width:100%;
+    background: var(--panel);
+    backdrop-filter: blur(20px);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:18px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.02) inset;
+  }
+
+  /* ---------- Header ---------- */
+  .hud-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:2px 4px 14px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:14px;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:30px; height:30px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: linear-gradient(135deg, var(--cyan), #0f766e);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:13px; color:#04120f;
+    box-shadow: 0 0 16px rgba(45,212,191,0.5);
+    flex-shrink:0;
+  }
+  .brand-text h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:16px; font-weight:700; letter-spacing:0.3px; line-height:1.1;
+  }
+  .brand-text p{
+    font-family:'JetBrains Mono', monospace;
+    font-size:9px; color:var(--text-faint); letter-spacing:1.2px;
+    text-transform:uppercase; margin-top:3px;
+  }
+  .status-pill{
+    display:flex; align-items:center; gap:6px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:9px; letter-spacing:1px; text-transform:uppercase;
+    color: var(--cyan);
+    background: rgba(45,212,191,0.08);
+    border:1px solid rgba(45,212,191,0.25);
+    padding:5px 9px; border-radius:20px;
+    transition: all 0.3s ease;
+  }
+  .header-right{ display:flex; align-items:center; gap:8px; }
+  .sound-toggle{
+    width:26px; height:26px; border-radius:50%;
+    background: rgba(45,212,191,0.08);
+    border:1px solid rgba(45,212,191,0.25);
+    color: var(--cyan);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; cursor:pointer;
+    transition: all 0.2s ease;
+    flex-shrink:0;
+  }
+  .sound-toggle:hover{ border-color:var(--border-bright); }
+  .sound-toggle.muted{ color:var(--text-faint); border-color:var(--border); }
+  .status-dot{
+    width:6px; height:6px; border-radius:50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+    animation: pulse-dot 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-dot{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  /* ---------- Settings toggle ---------- */
+  .settings-row{ margin-bottom:12px; }
+  .settings-toggle{
+    width:100%;
+    display:flex; align-items:center; justify-content:space-between;
+    background:transparent; border:1px dashed var(--border);
+    border-radius:8px; padding:8px 10px; cursor:pointer;
+    font-family:'JetBrains Mono', monospace; font-size:10px;
+    color:var(--text-faint); letter-spacing:0.5px; text-transform:uppercase;
+  }
+  .settings-toggle:hover{ border-color:var(--border-bright); color:var(--text-dim); }
+  .settings-panel{
+    max-height:0; overflow:hidden; opacity:0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease;
+  }
+  .settings-panel.open{ max-height:70px; opacity:1; margin-top:8px; }
+  .api-input{
+    width:100%; padding:10px 12px;
+    background: rgba(2,6,16,0.6);
+    border:1px solid var(--border);
+    border-radius:8px; color:#fff;
+    font-family:'JetBrains Mono', monospace; font-size:11px;
+    outline:none; transition: border-color 0.2s;
+  }
+  .api-input:focus{ border-color: var(--border-bright); }
+
+  /* ---------- 3D viewport ---------- */
+  .viewport-wrap{ position:relative; margin-bottom:12px; }
+  #canvas-container{
+    width:100%; height:260px;
+    border-radius:12px;
+    background: radial-gradient(circle at 50% 30%, #0c1424 0%, #04060c 75%);
+    overflow:hidden; position:relative;
+    border:1px solid var(--border);
+    cursor:grab;
+  }
+  #canvas-container:active{ cursor:grabbing; }
+
+  .hud-corner{ position:absolute; width:16px; height:16px; pointer-events:none; opacity:0.55; }
+  .hud-corner::before, .hud-corner::after{ content:''; position:absolute; background:var(--cyan); }
+  .hud-corner.tl{ top:8px; left:8px; }
+  .hud-corner.tr{ top:8px; right:8px; transform:scaleX(-1); }
+  .hud-corner.bl{ bottom:8px; left:8px; transform:scaleY(-1); }
+  .hud-corner.br{ bottom:8px; right:8px; transform:scale(-1,-1); }
+  .hud-corner::before{ width:2px; height:16px; }
+  .hud-corner::after{ width:16px; height:2px; }
+
+  .scanline{
+    position:absolute; inset:0; pointer-events:none;
+    background: repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(45,212,191,0.03) 4px);
+    mix-blend-mode: overlay;
+  }
+
+  .speech-bubble{
+    position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    background: rgba(6,10,18,0.9);
+    border:1px solid var(--cyan);
+    border-radius:14px; padding:6px 14px;
+    font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:500;
+    letter-spacing:0.6px; color:var(--cyan);
+    box-shadow:0 0 14px rgba(45,212,191,0.35);
+    pointer-events:none; transition: color 0.3s, border-color 0.3s, box-shadow 0.3s;
+    white-space:nowrap;
+    max-width:82%;
+    text-align:center;
+    line-height:1.45;
+  }
+  .speech-bubble.bubble-label{
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .speech-bubble.bubble-talk{
+    white-space:normal;
+    text-transform:none;
+    letter-spacing:0.2px;
+    font-size:10.5px;
+    animation: bubble-breathe 1.6s ease-in-out infinite;
+  }
+  @keyframes bubble-breathe{
+    0%,100%{ box-shadow:0 0 14px rgba(45,212,191,0.35); }
+    50%{ box-shadow:0 0 20px rgba(45,212,191,0.55); }
+  }
+
+  .telemetry{
+    display:flex; justify-content:space-between;
+    font-family:'JetBrains Mono', monospace; font-size:9px;
+    color:var(--text-faint); letter-spacing:0.5px;
+    padding:8px 2px; text-transform:uppercase;
+  }
+  .telemetry span b{ color:var(--text-dim); font-weight:500; }
+
+  /* ---------- Console / chat ---------- */
+  .chat-box{
+    height:168px; background: rgba(3,6,14,0.65);
+    border:1px solid var(--border); border-radius:10px;
+    padding:12px; overflow-y:auto; margin-bottom:10px;
+    font-family:'JetBrains Mono', monospace; font-size:12px; line-height:1.6;
+    scrollbar-width:thin;
+  }
+  .chat-box::-webkit-scrollbar{ width:6px; }
+  .chat-box::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+  .line{ margin-bottom:8px; word-break:break-word; }
+  .tag{ font-weight:500; margin-right:6px; }
+  .tag-user{ color:var(--cyan); }
+  .tag-bot{ color:var(--violet); }
+  .tag-sys{ color:var(--text-faint); }
+  .tag-err{ color:var(--rose); }
+  .msg-text{ color:var(--text); font-family:'Inter', sans-serif; font-size:12.5px; }
+  .msg-sys{ color:var(--text-faint); font-family:'Inter', sans-serif; font-size:12px; }
+
+  /* ---------- Input row ---------- */
+  .input-group{ display:flex; gap:8px; align-items:center; }
+  .prompt-wrap{
+    flex:1; display:flex; align-items:center; gap:6px;
+    background: rgba(3,6,14,0.65);
+    border:1px solid var(--border); border-radius:8px;
+    padding:0 4px 0 12px;
+  }
+  .prompt-wrap:focus-within{ border-color: var(--border-bright); }
+  .prompt-chevron{ color:var(--cyan); font-family:'JetBrains Mono', monospace; font-size:13px; }
+  input[type="text"]{
+    flex:1; padding:11px 6px; background:transparent; border:none;
+    color:#fff; font-family:'JetBrains Mono', monospace; font-size:12px; outline:none;
+  }
+  input[type="text"]::placeholder{ color:var(--text-faint); }
+
+  button.send-btn{
+    background: linear-gradient(135deg, var(--cyan), #0e7a6d);
+    color:#04120f; border:none; width:42px; height:42px; border-radius:8px;
+    cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 4px 14px rgba(45,212,191,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+    flex-shrink:0;
+  }
+  button.send-btn:hover{ transform:translateY(-1px); box-shadow:0 6px 18px rgba(45,212,191,0.45); }
+  button.send-btn:active{ transform:translateY(0); }
+  button.send-btn:focus-visible, .settings-toggle:focus-visible, input:focus-visible{
+    outline:2px solid var(--cyan); outline-offset:2px;
+  }
+
+  .hint-text{ font-size:10px; color:var(--text-faint); margin-top:10px; text-align:center; font-family:'JetBrains Mono', monospace; letter-spacing:0.3px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .status-dot{ animation:none; }
+  }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module">
+  import OpenAI from 'https://cdn.jsdelivr.net/npm/openai@4.28.0/+esm';
+  window.OpenAI = OpenAI;
+</script>
+</head>
+<body>
+
+<div class="app-card">
+
+  <div class="hud-header">
+    <div class="brand">
+      <div class="brand-mark">B</div>
+      <div class="brand-text">
+        <h1>Byte</h1>
+        <p>Reasoning Core · CS Tutor</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="sound-toggle" id="soundToggle" type="button" aria-label="Toggle sound" title="Toggle sound">🔊</button>
+      <div class="status-pill" id="statusPill">
+        <span class="status-dot"></span><span id="statusPillText">Online</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-row">
+    <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false">
+      <span>⚙ Groq API Key</span><span id="toggleChevron">▾</span>
+    </button>
+    <div class="settings-panel" id="settingsPanel">
+      <input type="password" id="apiKey" class="api-input" placeholder="gsk_..." />
+    </div>
+  </div>
+
+  <div class="viewport-wrap">
+    <div id="canvas-container">
+      <div class="hud-corner tl"></div><div class="hud-corner tr"></div>
+      <div class="hud-corner bl"></div><div class="hud-corner br"></div>
+      <div class="scanline"></div>
+      <div class="speech-bubble bubble-label" id="statusBubble">Core Idle</div>
+    </div>
+    <div class="telemetry">
+      <span>Model <b id="telModel">qwen3.6-27b</b></span>
+      <span>State <b id="telState">idle</b></span>
+      <span>Latency <b id="telLatency">—</b></span>
+    </div>
+  </div>
+
+  <div class="chat-box" id="chat">
+    <div class="line"><span class="tag tag-sys">[SYS]</span><span class="msg-sys">Byte initialized. Reasoning core online — ask about code, algorithms, or CS concepts.</span></div>
+  </div>
+
+  <div class="input-group">
+    <div class="prompt-wrap">
+      <span class="prompt-chevron">›</span>
+      <input type="text" id="userInput" placeholder="Ask Byte something..." onkeydown="if(event.key === 'Enter') sendMsg()" />
+    </div>
+    <button class="send-btn" onclick="sendMsg()" aria-label="Send">➤</button>
+  </div>
+  <div class="hint-text">drag · rotate — scroll · zoom — click core · poke</div>
+</div>
+
+<script>
+/* ============================= SETTINGS TOGGLE ============================= */
+const settingsToggle = document.getElementById('settingsToggle');
+const settingsPanel = document.getElementById('settingsPanel');
+settingsToggle.addEventListener('click', () => {
+  const open = settingsPanel.classList.toggle('open');
+  settingsToggle.setAttribute('aria-expanded', open);
+  document.getElementById('toggleChevron').textContent = open ? '▴' : '▾';
+});
+
+const soundToggle = document.getElementById('soundToggle');
+soundToggle.addEventListener('click', () => {
+  ensureAudio();
+  soundEnabled = !soundEnabled;
+  soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+  soundToggle.classList.toggle('muted', !soundEnabled);
+  if (!soundEnabled) stopHum();
+  else playClick();
+});
+
+/* ============================= EMOTION PALETTE ============================= */
+// Each emotion also carries brow + mouth definitions so the face reads clearly.
+const EMOTIONS = {
+  idle:      { color: 0x2dd4bf, label: 'Core Idle',      brow: { rot: 0.00, y: 0 },              mouth: { type: 'line',  curve: 0.06 } },
+  thinking:  { color: 0xa78bfa, label: 'Processing',     brow: { rot: 0.10, y: 0, asym: 0.16 },   mouth: { type: 'line',  curve: -0.02, tilt: 0.4 } },
+  happy:     { color: 0xfbbf24, label: 'Confident',      brow: { rot: 0.16, y: 0.03 },            mouth: { type: 'smile', curve: 0.34 } },
+  excited:   { color: 0xf472b6, label: 'Energized',      brow: { rot: 0.22, y: 0.05 },            mouth: { type: 'smile', curve: 0.5, teeth: true } },
+  confused:  { color: 0xf97316, label: 'Uncertain',      brow: { rot: 0.05, y: 0, asym: 0.34 },   mouth: { type: 'wave' } },
+  angry:     { color: 0xfb7185, label: 'Error State',    brow: { rot: -0.32, y: -0.02 },          mouth: { type: 'frown', curve: -0.34, jagged: true } },
+  surprised: { color: 0xe9d5ff, label: 'Startled',       brow: { rot: 0.30, y: 0.07 },            mouth: { type: 'o' } },
+  sad:       { color: 0x60a5fa, label: 'Low Confidence', brow: { rot: -0.10, y: -0.01, asym: -0.16 }, mouth: { type: 'frown', curve: -0.18 } },
+  laugh:     { color: 0xffd166, label: 'Amused',         brow: { rot: 0.22, y: 0.05 },             mouth: { type: 'smile', curve: 0.55, teeth: true } }
+};
+
+let scene, camera, renderer, controls, raycaster, mouse;
+let robotGroup, head, jaw, leftEye, rightEye, leftBrow, rightBrow, mouthMesh, mouthCtx, mouthCanvas, mouthTexture;
+let antennaLight, core, haloGroup, orbNodes = [];
+let leftShoulderPivot, rightShoulderPivot;
+let pointLight, rimLight;
+let currentEmotion = 'idle';
+let isTalking = false;
+let blinkTimer = 0;
+let lookTimer = 0;
+let lookTargetY = 0;
+let headTiltTarget = 0;
+let speechActive = false;
+let speechHoldTimeout = null;
+let typeInterval = null;
+let soundEnabled = true;
+let audioCtx = null;
+let humOscillator = null, humGain = null, humWobbleInterval = null;
+let isLaughing = false;
+let laughTimer = 0;
+let pokeCount = 0;
+let awayPhase = 'none'; // 'none' | 'leaving' | 'away' | 'returning'
+let awayStartTime = 0;
+const LEAVE_MS = 700, AWAY_MS = 1500, RETURN_MS = 700, SINK_DIST = 3.4;
+
+/* ============================= TEXTURE HELPERS ============================= */
+function makeGlowTexture(){
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.5)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(c);
+}
+
+function makeGlowSprite(colorHex, size, glowTex){
+  const mat = new THREE.SpriteMaterial({
+    map: glowTex, color: colorHex, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(size, size, 1);
+  return sprite;
+}
+
+/* ============================= SOUND ENGINE ============================= */
+// All sounds are synthesized on the fly with the Web Audio API — beeps and
+// blips, not recordings — so there is nothing to load and nothing to license.
+function ensureAudio(){
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new Ctx();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone({ freq = 440, freqEnd = null, duration = 0.08, type = 'sine', gain = 0.14 } = {}){
+  if (!soundEnabled) return;
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  const now = audioCtx.currentTime;
+  osc.frequency.setValueAtTime(freq, now);
+  if (freqEnd) osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd, 30), now + duration);
+  g.gain.setValueAtTime(gain, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + duration + 0.02);
+}
+
+// One short randomized-pitch blip per spoken word — classic synthesized robot speech.
+const BLIP_RANGES = {
+  idle:      [380, 460], thinking:  [280, 340], happy:     [520, 760],
+  excited:   [620, 940], confused:  [300, 380], angry:     [180, 260],
+  surprised: [700, 1000], sad:      [200, 260]
+};
+function playBlip(emotion){
+  const [lo, hi] = BLIP_RANGES[emotion] || BLIP_RANGES.idle;
+  const freq = lo + Math.random() * (hi - lo);
+  playTone({ freq, freqEnd: freq * 0.88, duration: 0.05, gain: 0.12, type: emotion === 'angry' ? 'square' : 'sine' });
+}
+
+function playClick(){
+  playTone({ freq: 900, freqEnd: 1400, duration: 0.05, gain: 0.14 });
+  setTimeout(() => playTone({ freq: 1200, freqEnd: 1800, duration: 0.04, gain: 0.1 }), 45);
+}
+
+function playChime(){
+  playTone({ freq: 520, freqEnd: 780, duration: 0.12, gain: 0.1 });
+  setTimeout(() => playTone({ freq: 780, freqEnd: 1040, duration: 0.14, gain: 0.08 }), 90);
+}
+
+function playErrorTone(){
+  playTone({ freq: 260, freqEnd: 90, duration: 0.32, gain: 0.13, type: 'sawtooth' });
+}
+
+// A short filtered noise burst — the breathy "h" at the front of each "ha".
+function playBreathNoise(startTime, duration, gain){
+  if (!soundEnabled) return;
+  ensureAudio();
+  const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 1400;
+  filter.Q.value = 0.6;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(gain, startTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  noise.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
+  noise.start(startTime); noise.stop(startTime + duration + 0.01);
+}
+
+// The tonal "a" of each "ha" — two slightly detuned oscillators with a downward
+// pitch swoop and a warm lowpass, so it reads as a voice-like syllable rather than a beep.
+function playLaughVowel(startTime, freq, duration, peakGain){
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 2200;
+  filter.connect(audioCtx.destination);
+
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, startTime);
+  g.gain.exponentialRampToValueAtTime(peakGain, startTime + 0.018);
+  g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  g.connect(filter);
+
+  [{ type: 'sawtooth', mix: 0.75, detune: 1 }, { type: 'sine', mix: 0.5, detune: 1.008 }].forEach(v => {
+    const osc = audioCtx.createOscillator();
+    osc.type = v.type;
+    osc.frequency.setValueAtTime(freq * v.detune, startTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * v.detune * 0.7, startTime + duration);
+    const oscGain = audioCtx.createGain();
+    oscGain.gain.value = v.mix;
+    osc.connect(oscGain);
+    oscGain.connect(g);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  });
+}
+
+// A few "ha" syllables with uneven, human-ish timing and a rise-then-fade volume arc.
+function playLaugh(){
+  if (!soundEnabled) return;
+  ensureAudio();
+  const bursts = 5 + Math.floor(Math.random() * 2);
+  const t0 = audioCtx.currentTime;
+  let cursor = 0.02;
+  for (let i = 0; i < bursts; i++) {
+    const progress = i / (bursts - 1);
+    const gap = 0.135 - progress * 0.03 + (Math.random() * 0.03 - 0.015);
+    if (i > 0) cursor += Math.max(0.09, gap);
+    const startTime = t0 + cursor;
+    const duration = 0.16 + Math.random() * 0.04;
+    const freq = 320 - i * 6 + Math.random() * 40;
+    // volume arc: builds through the first couple bursts, fades on the last ones
+    const arc = progress < 0.4 ? 0.6 + progress * 1.5 : 1 - (progress - 0.4) * 0.9;
+    const peakGain = 0.15 * Math.max(0.35, arc);
+
+    playBreathNoise(startTime, 0.028, 0.05 * arc);
+    playLaughVowel(startTime + 0.012, freq, duration, peakGain);
+  }
+}
+
+// Low idling hum while Byte is "thinking" — stopped as soon as it settles on an answer.
+function startHum(){
+  if (!soundEnabled) return;
+  ensureAudio();
+  stopHum();
+  humOscillator = audioCtx.createOscillator();
+  humGain = audioCtx.createGain();
+  humOscillator.type = 'sine';
+  humOscillator.frequency.value = 110;
+  humGain.gain.value = 0.0001;
+  humOscillator.connect(humGain);
+  humGain.connect(audioCtx.destination);
+  humOscillator.start();
+  humGain.gain.exponentialRampToValueAtTime(0.045, audioCtx.currentTime + 0.25);
+  humWobbleInterval = setInterval(() => {
+    if (humOscillator) humOscillator.frequency.setTargetAtTime(100 + Math.random() * 30, audioCtx.currentTime, 0.12);
+  }, 350);
+}
+function stopHum(){
+  if (humWobbleInterval) { clearInterval(humWobbleInterval); humWobbleInterval = null; }
+  if (humOscillator) {
+    const osc = humOscillator, g = humGain;
+    try { g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15); } catch (e) {}
+    setTimeout(() => { try { osc.stop(); } catch (e) {} }, 220);
+    humOscillator = null;
+  }
+}
+
+// A short irritated growl/buzz — used when Byte gets poked and isn't happy about it.
+function playAnnoyed(){
+  playTone({ freq: 210, freqEnd: 100, duration: 0.15, gain: 0.17, type: 'sawtooth' });
+  setTimeout(() => playTone({ freq: 170, freqEnd: 85, duration: 0.17, gain: 0.15, type: 'sawtooth' }), 120);
+}
+
+// A slow descending sigh — Byte has had enough and is stepping away for a moment.
+function playSigh(){
+  playTone({ freq: 260, freqEnd: 130, duration: 0.5, gain: 0.11, type: 'sine' });
+}
+
+// A gentle rising chime for when Byte comes back and forgives you.
+function playForgiveChime(){
+  playTone({ freq: 440, freqEnd: 560, duration: 0.18, gain: 0.1 });
+  setTimeout(() => playTone({ freq: 560, freqEnd: 700, duration: 0.2, gain: 0.09 }), 130);
+  setTimeout(() => playTone({ freq: 700, freqEnd: 880, duration: 0.24, gain: 0.08 }), 280);
+}
+
+/* ============================= MOUTH DRAWING ============================= */
+function hexToCss(hex){ return '#' + hex.toString(16).padStart(6, '0'); }
+
+function drawMouth(def, openAmt, t){
+  const w = mouthCanvas.width, h = mouthCanvas.height;
+  const ctx = mouthCtx;
+  ctx.clearRect(0, 0, w, h);
+  const colorHex = hexToCss(EMOTIONS[currentEmotion].color);
+  const cx = w / 2, cy = h / 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (def.type === 'o'){
+    const r = (h * 0.28) * (0.5 + openAmt * 0.7);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, r * 0.85, r, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fill();
+    ctx.strokeStyle = colorHex;
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    return;
+  }
+
+  const halfW = w * 0.32;
+  const curve = (def.curve || 0) * h * (1 + openAmt * 0.4);
+  const tilt = (def.tilt || 0) * openAmt * 6;
+
+  ctx.beginPath();
+  if (def.type === 'wave'){
+    ctx.moveTo(cx - halfW, cy);
+    const segs = 5;
+    for (let i = 1; i <= segs; i++){
+      const x = cx - halfW + (halfW * 2 * i) / segs;
+      const y = cy + Math.sin(i * 1.6 + t * 4) * (h * 0.1) + openAmt * (h * 0.08);
+      ctx.lineTo(x, y);
+    }
+  } else {
+    // line / smile / frown share a quadratic-curve base
+    const cpY = cy - curve + tilt;
+    ctx.moveTo(cx - halfW, cy + Math.abs(curve) * 0.2);
+    ctx.quadraticCurveTo(cx, cpY, cx + halfW, cy + Math.abs(curve) * 0.2 - tilt * 2);
+
+    if (def.jagged){
+      ctx.lineTo(cx + halfW * 0.55, cy + Math.abs(curve) * 0.6);
+      ctx.lineTo(cx + halfW * 0.15, cy + Math.abs(curve) * 0.15);
+    }
+  }
+  ctx.strokeStyle = colorHex;
+  ctx.lineWidth = 4.5;
+  ctx.stroke();
+
+  if (def.teeth && openAmt > 0.25){
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    const teethCount = 5;
+    const gap = (halfW * 1.7) / teethCount;
+    for (let i = 0; i < teethCount; i++){
+      const x = cx - halfW * 0.85 + i * gap;
+      ctx.fillRect(x, cy - 2, gap * 0.65, 6 + openAmt * 6);
+    }
+  }
+}
+
+/* ============================= SCENE SETUP ============================= */
+function initByte(){
+  const container = document.getElementById('canvas-container');
+  const width = container.clientWidth, height = container.clientHeight;
+
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x04060c, 4.5, 11);
+
+  camera = new THREE.PerspectiveCamera(42, width/height, 0.1, 100);
+  camera.position.set(0, 0.35, 5.8);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  if (renderer.outputEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+  if (renderer.toneMapping !== undefined) { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; }
+  container.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+  controls.minDistance = 4;
+  controls.maxDistance = 8;
+  controls.enablePan = false;
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  scene.add(new THREE.AmbientLight(0x8ba3c7, 0.45));
+  pointLight = new THREE.PointLight(0x2dd4bf, 2.2, 12);
+  pointLight.position.set(2.2, 3, 3.5);
+  scene.add(pointLight);
+  rimLight = new THREE.PointLight(0xa78bfa, 1.1, 12);
+  rimLight.position.set(-2.5, 1, -3);
+  scene.add(rimLight);
+
+  const glowTex = makeGlowTexture();
+
+  // Floor grid
+  const grid = new THREE.GridHelper(7, 26, 0x2dd4bf, 0x14202f);
+  grid.position.y = -1.55;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.28;
+  scene.add(grid);
+
+  robotGroup = new THREE.Group();
+
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x3a4658, roughness: 0.28, metalness: 0.88 });
+  const darkMat  = new THREE.MeshStandardMaterial({ color: 0x0a0e18, roughness: 0.5, metalness: 0.7 });
+  const visorMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.08, metalness: 0.95 });
+  const trimMat  = new THREE.MeshStandardMaterial({ color: 0x2dd4bf, emissive: 0x2dd4bf, emissiveIntensity: 1.1, roughness: 0.4, metalness: 0.3 });
+  const jointMat = new THREE.MeshStandardMaterial({ color: 0x232c3a, roughness: 0.35, metalness: 0.8 });
+
+  /* ---- Torso ---- */
+  const torso = new THREE.Group();
+  const chest = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.75, 0.8), steelMat);
+  chest.position.y = -1.05;
+  torso.add(chest);
+  torso.userData.chest = chest;
+
+  const chestInset = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.5, 0.05), darkMat);
+  chestInset.position.set(0, -1.05, 0.42);
+  torso.add(chestInset);
+
+  // small status LED strip on the chest for extra "alive" detail
+  const ledStripMat = new THREE.MeshStandardMaterial({ color: 0x2dd4bf, emissive: 0x2dd4bf, emissiveIntensity: 1.4 });
+  const ledStrip = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.02), ledStripMat);
+  ledStrip.position.set(0, -0.82, 0.44);
+  torso.add(ledStrip);
+  torso.userData.ledStrip = ledStrip;
+
+  // glowing core (signature element)
+  core = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.16, 0),
+    new THREE.MeshStandardMaterial({ color: 0x2dd4bf, emissive: 0x2dd4bf, emissiveIntensity: 2, roughness: 0.2, metalness: 0.4 })
+  );
+  core.position.set(0, -1.05, 0.46);
+  torso.add(core);
+  const coreGlow = makeGlowSprite(0x2dd4bf, 0.9, glowTex);
+  coreGlow.position.copy(core.position);
+  torso.add(coreGlow);
+  torso.userData.coreGlow = coreGlow;
+
+  /* ---- Arms (shoulder pivot -> upper arm -> forearm) ---- */
+  function buildArm(sign){
+    const pivot = new THREE.Group();
+    pivot.position.set(sign * 0.72, -0.75, 0);
+
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), steelMat);
+    pivot.add(shoulder);
+
+    const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.55, 10), jointMat);
+    upperArm.position.set(0, -0.3, 0);
+    pivot.add(upperArm);
+
+    const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 12), jointMat);
+    elbow.position.set(0, -0.58, 0);
+    pivot.add(elbow);
+
+    const forearmPivot = new THREE.Group();
+    forearmPivot.position.set(0, -0.58, 0);
+    const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.48, 10), darkMat);
+    forearm.position.set(0, -0.26, 0);
+    forearmPivot.add(forearm);
+    pivot.add(forearmPivot);
+
+    torso.add(pivot);
+    return { pivot, forearmPivot };
+  }
+  const leftArm = buildArm(-1);
+  const rightArm = buildArm(1);
+  leftShoulderPivot = leftArm.pivot;
+  rightShoulderPivot = rightArm.pivot;
+  torso.userData.leftForearm = leftArm.forearmPivot;
+  torso.userData.rightForearm = rightArm.forearmPivot;
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.22, 12), darkMat);
+  neck.position.y = -0.62;
+  torso.add(neck);
+
+  robotGroup.add(torso);
+  robotGroup.userData.torso = torso;
+
+  /* ---- Head ---- */
+  head = new THREE.Group();
+  const skull = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.05, 1.15), steelMat);
+  head.add(skull);
+
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.08), visorMat);
+  visor.position.set(0, 0.08, 0.58);
+  head.add(visor);
+
+  // temple trim lines
+  [-0.72, 0.72].forEach(x => {
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.7, 0.06), trimMat);
+    strip.position.set(x, 0.05, 0.4);
+    head.add(strip);
+  });
+
+  jaw = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.24, 0.95), darkMat);
+  jaw.position.set(0, -0.48, 0.08);
+  head.add(jaw);
+
+  const eyeGeo = new THREE.SphereGeometry(0.1, 16, 16);
+  const eyeMatBase = new THREE.MeshStandardMaterial({ color: 0x2dd4bf, emissive: 0x2dd4bf, emissiveIntensity: 2 });
+  leftEye = new THREE.Mesh(eyeGeo, eyeMatBase.clone());
+  leftEye.position.set(-0.32, 0.1, 0.63);
+  head.add(leftEye);
+  rightEye = new THREE.Mesh(eyeGeo, eyeMatBase.clone());
+  rightEye.position.set(0.32, 0.1, 0.63);
+  head.add(rightEye);
+  const leftGlow = makeGlowSprite(0x2dd4bf, 0.45, glowTex); leftGlow.position.copy(leftEye.position);
+  const rightGlow = makeGlowSprite(0x2dd4bf, 0.45, glowTex); rightGlow.position.copy(rightEye.position);
+  head.add(leftGlow, rightGlow);
+  head.userData.eyeGlows = [leftGlow, rightGlow];
+
+  // eyebrows — thin metal plates that rotate/shift for expression
+  const browGeo = new THREE.BoxGeometry(0.32, 0.05, 0.05);
+  leftBrow = new THREE.Mesh(browGeo, jointMat.clone());
+  leftBrow.position.set(-0.32, 0.32, 0.63);
+  head.add(leftBrow);
+  rightBrow = new THREE.Mesh(browGeo, jointMat.clone());
+  rightBrow.position.set(0.32, 0.32, 0.63);
+  head.add(rightBrow);
+  head.userData.browBaseY = 0.32;
+
+  // mouth — canvas-driven texture so it can change shape per emotion & talk
+  mouthCanvas = document.createElement('canvas');
+  mouthCanvas.width = 160; mouthCanvas.height = 80;
+  mouthCtx = mouthCanvas.getContext('2d');
+  mouthTexture = new THREE.CanvasTexture(mouthCanvas);
+  const mouthMat = new THREE.MeshBasicMaterial({ map: mouthTexture, transparent: true, depthWrite: false });
+  mouthMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.28), mouthMat);
+  mouthMesh.position.set(0, -0.44, 0.605);
+  head.add(mouthMesh);
+  drawMouth(EMOTIONS.idle.mouth, 0, 0);
+  mouthTexture.needsUpdate = true;
+
+  const antPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.35, 8), darkMat);
+  antPole.position.set(0, 0.72, 0);
+  head.add(antPole);
+  antennaLight = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), new THREE.MeshStandardMaterial({ color: 0x2dd4bf, emissive: 0x2dd4bf, emissiveIntensity: 2 }));
+  antennaLight.position.set(0, 0.92, 0);
+  head.add(antennaLight);
+  const antGlow = makeGlowSprite(0x2dd4bf, 0.4, glowTex);
+  antGlow.position.copy(antennaLight.position);
+  head.add(antGlow);
+  head.userData.antGlow = antGlow;
+
+  head.position.y = -0.05;
+  robotGroup.add(head);
+
+  /* ---- Halo ring + orbiting nodes (signature element) ---- */
+  haloGroup = new THREE.Group();
+  haloGroup.position.set(0, 0.55, 0);
+  haloGroup.rotation.x = Math.PI / 2.4;
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.95, 0.012, 8, 64),
+    new THREE.MeshStandardMaterial({ color: 0x2dd4bf, emissive: 0x2dd4bf, emissiveIntensity: 1.4, roughness: 0.3 })
+  );
+  haloGroup.add(ring);
+  haloGroup.userData.ring = ring;
+
+  orbNodes = [];
+  for (let i = 0; i < 3; i++) {
+    const node = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), new THREE.MeshStandardMaterial({ color: 0x2dd4bf, emissive: 0x2dd4bf, emissiveIntensity: 2 }));
+    const glow = makeGlowSprite(0x2dd4bf, 0.3, glowTex);
+    haloGroup.add(node, glow);
+    orbNodes.push({ node, glow, offset: (i / 3) * Math.PI * 2 });
+  }
+  robotGroup.add(haloGroup);
+
+  scene.add(robotGroup);
+
+  // faint mirrored reflection of the robot
+  const reflection = cloneAsReflection(robotGroup);
+  scene.add(reflection);
+
+  // ambient particles
+  const pGeo = new THREE.BufferGeometry();
+  const count = 90;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count * 3; i++) positions[i] = (Math.random() - 0.5) * 10;
+  pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.025, color: 0x2dd4bf, transparent: true, opacity: 0.45 }));
+  scene.add(particles);
+  scene.userData.particles = particles;
+
+  container.addEventListener('click', onRobotClick);
+  window.addEventListener('mousemove', onMouseMoveGlobal);
+  animate();
+}
+
+function cloneAsReflection(source){
+  const group = new THREE.Group();
+  source.traverse(obj => {
+    if (obj.isMesh) {
+      const mat = obj.material.clone();
+      mat.transparent = true;
+      mat.opacity = 0.1;
+      const clone = new THREE.Mesh(obj.geometry, mat);
+      obj.getWorldPosition(clone.position);
+      obj.getWorldQuaternion(clone.quaternion);
+      clone.scale.copy(obj.scale);
+      group.add(clone);
+    }
+  });
+  group.scale.y = -1;
+  group.position.y = -2.15;
+  return group;
+}
+
+/* ============================= INTERACTION ============================= */
+function onMouseMoveGlobal(e){
+  const container = document.getElementById('canvas-container');
+  const rect = container.getBoundingClientRect();
+  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+  mouse.x = ((e.clientX - rect.left) / container.clientWidth) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / container.clientHeight) * 2 + 1;
+}
+
+function onRobotClick(e){
+  const container = document.getElementById('canvas-container');
+  const rect = container.getBoundingClientRect();
+  const cx = ((e.clientX - rect.left) / container.clientWidth) * 2 - 1;
+  const cy = -((e.clientY - rect.top) / container.clientHeight) * 2 + 1;
+  raycaster.setFromCamera(new THREE.Vector2(cx, cy), camera);
+  const intersects = raycaster.intersectObjects([...head.children, core]);
+  if (intersects.length > 0 && awayPhase === 'none') {
+    pokeCount++;
+    if (pokeCount >= 4) {
+      pokeCount = 0;
+      startLeaveSequence();
+    } else {
+      setRobotEmotion('angry');
+      playAnnoyed();
+      isTalking = true;
+      laughTimer = 45;
+      const phrase = pokeCount === 3 ? "I will not answer now." : "Don't touch me, please.";
+      speak(phrase);
+      const talkDuration = Math.min(4000, 900 + phrase.length * 45);
+      setTimeout(() => { isTalking = false; }, talkDuration);
+    }
+  }
+}
+
+// Byte has had enough: it sinks away for a moment, then comes back calmer and forgives you.
+function startLeaveSequence(){
+  setRobotEmotion('sad');
+  playSigh();
+  awayPhase = 'leaving';
+  awayStartTime = performance.now();
+}
+
+/* ============================= ANIMATION LOOP ============================= */
+function animate(){
+  requestAnimationFrame(animate);
+  const t = Date.now() * 0.003;
+
+  robotGroup.position.set(0, Math.sin(t) * 0.05, 0);
+  robotGroup.rotation.y = Math.sin(t * 0.4) * 0.04 + mouse.x * 0.15;
+
+  // idle "look around" — head periodically glances to a new target independent of the mouse
+  lookTimer -= 1;
+  if (lookTimer <= 0) {
+    lookTargetY = (Math.random() - 0.5) * 0.5;
+    lookTimer = 180 + Math.random() * 260;
+  }
+  head.rotation.y += ((lookTargetY + mouse.x * 0.25) - head.rotation.y) * 0.03;
+  head.rotation.x = mouse.y * -0.08;
+
+  // head tilt target per emotion, eased toward
+  head.rotation.z += (headTiltTarget - head.rotation.z) * 0.05;
+
+  if (scene.userData.particles) scene.userData.particles.rotation.y = t * 0.04;
+
+  // breathing core + chest
+  const pulse = 1 + Math.sin(t * (currentEmotion === 'thinking' ? 5 : 2.2)) * 0.18;
+  core.scale.setScalar(pulse);
+  const torso = robotGroup.userData.torso;
+  if (torso) {
+    torso.userData.chest.scale.y = 1 + Math.sin(t * 1.4) * 0.012;
+    torso.userData.ledStrip.material.emissiveIntensity = 1 + Math.sin(t * 3) * 0.6;
+  }
+
+  // arm idle sway + emotion-driven gestures
+  const swayL = Math.sin(t * 0.6) * 0.06;
+  const swayR = Math.sin(t * 0.6 + Math.PI) * 0.06;
+  let poseL = 0, poseR = 0, elbowL = 0, elbowR = 0, spreadL = 0, spreadR = 0;
+  if (currentEmotion === 'thinking') {
+    // right arm lifts toward the chin, like considering a problem
+    poseR = -1.3; elbowR = -1.0; spreadR = -0.25;
+  } else if (currentEmotion === 'excited' || currentEmotion === 'happy') {
+    poseL = -0.35; poseR = -0.35;
+  } else if (currentEmotion === 'surprised') {
+    spreadL = 0.3; spreadR = -0.3;
+  } else if (currentEmotion === 'sad') {
+    poseL = 0.15; poseR = 0.15;
+  }
+  if (leftShoulderPivot && rightShoulderPivot) {
+    leftShoulderPivot.rotation.x += ((swayL + poseL) - leftShoulderPivot.rotation.x) * 0.06;
+    rightShoulderPivot.rotation.x += ((swayR + poseR) - rightShoulderPivot.rotation.x) * 0.06;
+    leftShoulderPivot.rotation.z += (spreadL - leftShoulderPivot.rotation.z) * 0.08;
+    rightShoulderPivot.rotation.z += (spreadR - rightShoulderPivot.rotation.z) * 0.08;
+    if (torso) {
+      torso.userData.leftForearm.rotation.x += (elbowL - torso.userData.leftForearm.rotation.x) * 0.08;
+      torso.userData.rightForearm.rotation.x += (elbowR - torso.userData.rightForearm.rotation.x) * 0.08;
+    }
+  }
+
+  // poke reaction: a sharp defensive flinch/recoil, not a happy bounce
+  if (laughTimer > 0) {
+    laughTimer--;
+    const decay = laughTimer / 45;
+    robotGroup.position.y += Math.sin(t * 30) * 0.03 * decay;
+    robotGroup.position.z += 0.05 * decay;
+    head.rotation.z += Math.sin(t * 26) * 0.05 * decay;
+    if (leftShoulderPivot && rightShoulderPivot) {
+      leftShoulderPivot.rotation.x -= 0.12 * decay;
+      rightShoulderPivot.rotation.x -= 0.12 * decay;
+    }
+  }
+
+  // Byte taking some space, then coming back to forgive you
+  if (awayPhase !== 'none') {
+    const now = performance.now();
+    if (awayPhase === 'leaving') {
+      const p = Math.min(1, (now - awayStartTime) / LEAVE_MS);
+      const eased = p * p;
+      robotGroup.position.y -= eased * SINK_DIST;
+      robotGroup.scale.setScalar(1 - eased * 0.55);
+      if (p >= 1) { awayPhase = 'away'; awayStartTime = now; }
+    } else if (awayPhase === 'away') {
+      robotGroup.position.y -= SINK_DIST;
+      robotGroup.scale.setScalar(0.45);
+      if (now - awayStartTime >= AWAY_MS) {
+        awayPhase = 'returning';
+        awayStartTime = now;
+        setRobotEmotion('happy');
+        playForgiveChime();
+        isTalking = true;
+        speak("I forgive you.");
+        setTimeout(() => { isTalking = false; }, 1800);
+      }
+    } else if (awayPhase === 'returning') {
+      const p = Math.min(1, (now - awayStartTime) / RETURN_MS);
+      const eased = 1 - Math.pow(1 - p, 2);
+      robotGroup.position.y -= (1 - eased) * SINK_DIST;
+      robotGroup.scale.setScalar(0.45 + eased * 0.55);
+      if (p >= 1) { awayPhase = 'none'; }
+    }
+  }
+
+  // blink
+  blinkTimer -= 1;
+  if (blinkTimer <= 0) {
+    leftEye.scale.y = rightEye.scale.y = 0.15;
+    if (blinkTimer < -6) { leftEye.scale.y = rightEye.scale.y = 1; blinkTimer = 90 + Math.random() * 150; }
+  }
+
+  // thinking wobble
+  if (currentEmotion === 'thinking') {
+    head.rotation.z += Math.sin(t * 6) * 0.002;
+  }
+
+  // mouth: redraw with a talking pulse layered onto the current emotion's shape
+  const def = EMOTIONS[currentEmotion].mouth;
+  const openAmt = isTalking ? (Math.sin(t * 16) * 0.5 + 0.5) : (def.type === 'o' ? 0.3 : 0.05);
+  drawMouth(def, openAmt, t);
+  mouthTexture.needsUpdate = true;
+
+  // halo ring + orbit nodes
+  const spin = currentEmotion === 'thinking' ? 1.6 : 0.35;
+  haloGroup.rotation.z += 0.004 * spin;
+  orbNodes.forEach((o, i) => {
+    const a = t * spin * 0.8 + o.offset;
+    o.node.position.set(Math.cos(a) * 0.95, Math.sin(a) * 0.95, 0);
+    o.glow.position.copy(o.node.position);
+  });
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+function setRobotEmotion(emotion){
+  const def = EMOTIONS[emotion] || EMOTIONS.idle;
+  currentEmotion = emotion;
+
+  const bubbleEl = document.getElementById('statusBubble');
+  bubbleEl.style.color = '#' + def.color.toString(16).padStart(6, '0');
+  bubbleEl.style.borderColor = '#' + def.color.toString(16).padStart(6, '0');
+  if (!speechActive) {
+    bubbleEl.classList.add('bubble-label');
+    bubbleEl.classList.remove('bubble-talk');
+    bubbleEl.textContent = def.label;
+  }
+  document.getElementById('telState').textContent = emotion;
+
+  const pill = document.getElementById('statusPill');
+  const hex = '#' + def.color.toString(16).padStart(6, '0');
+  pill.style.color = hex;
+  pill.style.borderColor = hex + '55';
+  document.getElementById('statusPillText').textContent = emotion === 'idle' ? 'Online' : def.label;
+
+  [leftEye, rightEye, antennaLight].forEach(m => {
+    m.material.color.setHex(def.color);
+    m.material.emissive.setHex(def.color);
+  });
+  head.userData.eyeGlows.forEach(g => g.material.color.setHex(def.color));
+  head.userData.antGlow.material.color.setHex(def.color);
+
+  core.material.color.setHex(def.color);
+  core.material.emissive.setHex(def.color);
+
+  haloGroup.userData.ring.material.color.setHex(def.color);
+  haloGroup.userData.ring.material.emissive.setHex(def.color);
+  orbNodes.forEach(o => {
+    o.node.material.color.setHex(def.color);
+    o.node.material.emissive.setHex(def.color);
+    o.glow.material.color.setHex(def.color);
+  });
+  robotGroup.userData.torso.userData.ledStrip.material.color.setHex(def.color);
+  robotGroup.userData.torso.userData.ledStrip.material.emissive.setHex(def.color);
+
+  pointLight.color.setHex(def.color);
+
+  // eyebrows: base rotation +/- asymmetry, plus vertical shift
+  const b = def.brow;
+  const asym = b.asym || 0;
+  leftBrow.rotation.z = b.rot + asym;
+  rightBrow.rotation.z = -(b.rot) + asym * -1;
+  leftBrow.position.y = head.userData.browBaseY + b.y;
+  rightBrow.position.y = head.userData.browBaseY + b.y;
+
+  // head tilt per emotion (eased toward each frame)
+  headTiltTarget = emotion === 'confused' ? 0.14 : emotion === 'sad' ? -0.06 : emotion === 'surprised' ? 0.02 : 0;
+
+  if (emotion === 'thinking') startHum(); else stopHum();
+}
+
+/* ============================= DIALOGUE BUBBLE ============================= */
+// Types Byte's reply into the speech bubble above its head, word by word,
+// then holds it for a moment before reverting to the plain status label.
+function speak(text){
+  const bubble = document.getElementById('statusBubble');
+  clearTimeout(speechHoldTimeout);
+  clearInterval(typeInterval);
+
+  speechActive = true;
+  bubble.classList.remove('bubble-label');
+  bubble.classList.add('bubble-talk');
+  bubble.textContent = '';
+
+  const words = text.split(' ');
+  let i = 0;
+  typeInterval = setInterval(() => {
+    i++;
+    bubble.textContent = words.slice(0, i).join(' ');
+    playBlip(currentEmotion);
+    if (i >= words.length) {
+      clearInterval(typeInterval);
+      const holdTime = Math.min(6000, 1600 + text.length * 45);
+      speechHoldTimeout = setTimeout(() => {
+        speechActive = false;
+        bubble.classList.remove('bubble-talk');
+        bubble.classList.add('bubble-label');
+        const def = EMOTIONS[currentEmotion] || EMOTIONS.idle;
+        bubble.textContent = def.label;
+      }, holdTime);
+    }
+  }, 55);
+}
+
+window.addEventListener('resize', () => {
+  const container = document.getElementById('canvas-container');
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+});
+
+/* ============================= CHAT / API ============================= */
+function appendLine(tagClass, tagText, msg, msgClass){
+  const chatEl = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'line';
+  div.innerHTML = `<span class="tag ${tagClass}">${tagText}</span><span class="${msgClass}"></span>`;
+  div.querySelector(`.${msgClass}`).textContent = msg;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+const MODEL_CHAIN = ['qwen/qwen3.6-27b', 'openai/gpt-oss-120b'];
+
+async function sendMsg(){
+  const inputEl = document.getElementById('userInput');
+  const apiKeyEl = document.getElementById('apiKey');
+  const query = inputEl.value.trim();
+  const apiKey = apiKeyEl.value.trim();
+
+  if (!query) return;
+
+  if (!apiKey) {
+    setRobotEmotion('angry');
+    playErrorTone();
+    appendLine('tag-err', '[ERR]', 'Missing Groq API key. Open the settings panel above.', 'msg-sys');
+    speak("I need a Groq API key first.");
+    settingsPanel.classList.add('open');
+    settingsToggle.setAttribute('aria-expanded', true);
+    return;
+  }
+
+  appendLine('tag-user', '[USER]', query, 'msg-text');
+  inputEl.value = '';
+  playClick();
+  setRobotEmotion('thinking');
+
+  const openai = new window.OpenAI({
+    apiKey: apiKey,
+    baseURL: "https://api.groq.com/openai/v1",
+    dangerouslyAllowBrowser: true
+  });
+
+  const start = performance.now();
+  let lastErr = null;
+
+  for (const model of MODEL_CHAIN) {
+    try {
+      const response = await openai.chat.completions.create({
+        model,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `You are Byte, a helpful CS tutor robot. You must output valid JSON. Respond strictly as a JSON object with two keys:
+            "emotion": strictly one of ("happy", "excited", "confused", "sad", "idle"),
+            "reply": concise answer under 3 sentences.`
+          },
+          { role: "user", content: query }
+        ]
+      });
+
+      const data = JSON.parse(response.choices[0].message.content);
+      const latency = Math.round(performance.now() - start);
+
+      document.getElementById('telModel').textContent = model.split('/').pop();
+      document.getElementById('telLatency').textContent = latency + 'ms';
+
+      isTalking = true;
+      setRobotEmotion(data.emotion || 'happy');
+      playChime();
+      appendLine('tag-bot', '[BYTE]', data.reply, 'msg-text');
+      speak(data.reply);
+      const talkDuration = Math.min(6500, 1200 + data.reply.length * 45);
+      setTimeout(() => { isTalking = false; }, talkDuration);
+      return;
+
+    } catch (err) {
+      lastErr = err;
+      // if model doesn't exist, try next in chain; otherwise stop retrying
+      if (!(err && err.status === 404)) break;
+    }
+  }
+
+  setRobotEmotion('confused');
+  playErrorTone();
+  const errMsg = (lastErr && lastErr.message) || 'Connection failed.';
+  appendLine('tag-err', '[ERR]', errMsg, 'msg-sys');
+  speak("Hmm, I couldn't reach the model.");
+}
+
+window.onload = initByte;
+</script>
+</body>
+</html>
