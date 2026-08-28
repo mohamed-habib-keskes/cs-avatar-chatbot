@@ -63,7 +63,9 @@
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
   #qr-toggle {
+    display: block;
     margin-top: 10px;
+    margin-left: auto;
     font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em;
     background: rgba(16,20,27,0.7);
     border: 1px solid var(--line);
@@ -72,7 +74,7 @@
     border-radius: 4px;
     cursor: pointer;
     backdrop-filter: blur(6px);
-    display: inline-flex; align-items: center; gap: 6px;
+    align-items: center; gap: 6px;
   }
   #qr-toggle:hover { border-color: var(--accent-dim); color: var(--text); }
 
@@ -86,7 +88,7 @@
     backdrop-filter: blur(8px);
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     display: none;
-    width: 200px;
+    width: 220px;
     text-align: center;
   }
   #qr-panel.show { display: block; }
@@ -251,7 +253,7 @@
   }
   #chat-input::placeholder { color: var(--dim); }
   #chat-input:focus { border-color: var(--accent-dim); }
-  #chat-send, #chat-key-toggle {
+  #chat-send {
     font-family: var(--mono); font-size: 12px;
     background: rgba(16,20,27,0.85);
     border: 1px solid var(--line);
@@ -261,44 +263,8 @@
     cursor: pointer;
     backdrop-filter: blur(6px);
   }
-  #chat-send:hover, #chat-key-toggle:hover { border-color: var(--accent-dim); }
+  #chat-send:hover { border-color: var(--accent-dim); }
   #chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
-  #chat-key-toggle.needs-key { border-color: #d97757; color: #d97757; }
-
-  #key-panel {
-    display: none;
-    background: rgba(16,20,27,0.92);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 12px 14px;
-    backdrop-filter: blur(6px);
-    font-family: var(--mono); font-size: 11px;
-  }
-  #key-panel.show { display: block; }
-  #key-panel .row { display: flex; gap: 8px; margin-top: 8px; }
-  #key-panel input {
-    flex: 1;
-    font-family: var(--mono); font-size: 12px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    color: var(--text);
-    padding: 8px 10px;
-    border-radius: 6px;
-    outline: none;
-  }
-  #key-panel input:focus { border-color: var(--accent-dim); }
-  #key-panel button {
-    font-family: var(--mono); font-size: 11px;
-    background: var(--accent-dim);
-    border: 1px solid var(--accent-dim);
-    color: var(--text);
-    padding: 0 12px;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  #key-panel .note { color: var(--dim); margin-top: 6px; line-height: 1.5; }
-  #key-status { color: var(--dim); }
-  #key-status.ok { color: var(--accent); }
 
   @media (max-width: 640px) {
     #chat-dock { bottom: 76px; width: 94vw; }
@@ -2619,9 +2585,8 @@ var qrcode = function() {
   <div class="status">
     <span class="dot"></span>ONLINE<br>
     glTF 2.0 · Draco compressed
-    <br>
-    <button id="qr-toggle">▢ SCAN ON PHONE</button>
   </div>
+  <button id="qr-toggle">▢ SCAN ON PHONE</button>
 </div>
 
 <div id="qr-panel">
@@ -2655,16 +2620,7 @@ var qrcode = function() {
 </div>
 
 <div class="hud" id="chat-dock">
-  <div id="key-panel">
-    <div>Groq API key <span id="key-status">— not set</span></div>
-    <div class="row">
-      <input type="password" id="key-input" placeholder="gsk_...">
-      <button id="key-save">Save</button>
-    </div>
-    <div class="note">Stored only in this page's memory for this session — never saved to disk, never sent anywhere but api.groq.com. Get a free key at console.groq.com/keys.</div>
-  </div>
   <div id="chat-row">
-    <button id="chat-key-toggle" title="Set API key">🔑</button>
     <input type="text" id="chat-input" placeholder="Ask the drone something…" autocomplete="off">
     <button id="chat-send">SEND</button>
   </div>
@@ -2943,9 +2899,9 @@ window.addEventListener('resize', () => {
 });
 
 // ---------- Chat / Groq integration ----------
-let groqApiKey = ''; // session-only, in memory — never persisted to disk or storage
-const GROQ_MODEL = 'qwen/qwen3.6-27b';
-const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+// Chat requests go to this page's own server (file2.py), which holds
+// the Groq API key. The phone/browser never needs a key of its own.
+const CHAT_ENDPOINT = '/api/chat';
 
 const chatHistory = [
   {
@@ -2958,14 +2914,11 @@ const bubble = document.getElementById('speech-bubble');
 const bubbleText = document.getElementById('bubble-text');
 const chatInput = document.getElementById('chat-input');
 const chatSend = document.getElementById('chat-send');
-const keyPanel = document.getElementById('key-panel');
-const keyToggle = document.getElementById('chat-key-toggle');
-const keyInput = document.getElementById('key-input');
-const keySave = document.getElementById('key-save');
-const keyStatus = document.getElementById('key-status');
 
 function showBubble() { bubble.classList.add('show'); }
-function hideBubbleSoon(delay = 9000) {
+// Bubble stays on screen for 75s after a reply finishes (was 9s) so
+// there's time to read a longer answer before it fades out.
+function hideBubbleSoon(delay = 75000) {
   clearTimeout(showBubble._t);
   showBubble._t = setTimeout(() => bubble.classList.remove('show'), delay);
 }
@@ -2989,41 +2942,56 @@ function typewrite(text, onDone) {
   }, speed);
 }
 
-function setKeyStatus() {
-  if (groqApiKey) {
-    keyStatus.textContent = '— saved for this session';
-    keyStatus.classList.add('ok');
-    keyToggle.classList.remove('needs-key');
-  } else {
-    keyStatus.textContent = '— not set';
-    keyStatus.classList.remove('ok');
-    keyToggle.classList.add('needs-key');
+// ---------- Canned Q&A ----------
+// Exact/near-exact matches here answer instantly without calling Groq.
+// Add as many entries as you like: `match` can be a string (checked as a
+// substring, case-insensitive) or an array of strings (any one matching
+// is enough).
+const QA_PAIRS = [
+  {
+    match: ['what is your name', "what's your name", 'who are you'],
+    reply: "I'm BusterDrone — reconnaissance unit, sarcasm module fully installed."
+  },
+  {
+    match: ['who made you', 'who created you', 'who built you'],
+    reply: "Built by my human, habib. I do the flying, he does the debugging but I m smarter than him."
+  },
+  {
+    match: ['what can you do', 'what do you do'],
+    reply: "Mostly hover, look cool, and answer questions. Occasionally judge your posture."
+  },
+  {
+    match: ['why I join cs ', 'why I join your club '],
+    reply:" You have many reasons, starting with the events we can mention, such as Hello World and CSTAM we can also mention the workshops covering many different domains. "
+  },
+  {
+    match: ['what is cstam  ', 'cstam?'],
+    reply:" CSTAM stands for Computer Society Tunisia Annual Meeting. It is the flagship congress of the IEEE Computer Society Tunisia Chapter, bringing together students, young professionals, researchers, entrepreneurs, and technology enthusiasts from across Tunisia. "
+  },
+  {
+    match: ['what is zerotrace  ', 'zerotrace?'],
+    reply:" ZeroTrace is a cybersecurity CTF competition that helps participants develop practical skills through challenges in areas like cryptography, web exploitation, and reverse engineering. "
+  },
+  {
+    match: ['what is cp  ', 'CP?',],
+    reply:"CP (Competitive Programming) is a type of programming competition where participants solve algorithmic and logical problems under time constraints. "
+  },
+
+
+];
+
+function findCannedReply(question) {
+  const q = question.trim().toLowerCase();
+  for (const pair of QA_PAIRS) {
+    const matches = Array.isArray(pair.match) ? pair.match : [pair.match];
+    if (matches.some(m => q.includes(m.toLowerCase()))) {
+      return pair.reply;
+    }
   }
+  return null;
 }
 
-keyToggle.addEventListener('click', () => {
-  keyPanel.classList.toggle('show');
-});
-
-keySave.addEventListener('click', () => {
-  const v = keyInput.value.trim();
-  if (v) {
-    groqApiKey = v;
-    keyInput.value = '';
-    setKeyStatus();
-    keyPanel.classList.remove('show');
-    chatInput.focus();
-  }
-});
-keyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') keySave.click(); });
-
 async function askDrone(question) {
-  if (!groqApiKey) {
-    keyPanel.classList.add('show');
-    keyInput.focus();
-    return;
-  }
-
   chatSend.disabled = true;
   chatInput.disabled = true;
   showBubble();
@@ -3031,20 +2999,25 @@ async function askDrone(question) {
 
   chatHistory.push({ role: 'user', content: question });
 
+  const canned = findCannedReply(question);
+  if (canned) {
+    chatHistory.push({ role: 'assistant', content: canned });
+    typewrite(canned, () => hideBubbleSoon());
+    chatSend.disabled = false;
+    chatInput.disabled = false;
+    chatInput.value = '';
+    chatInput.focus();
+    return;
+  }
+
   try {
-    const res = await fetch(GROQ_ENDPOINT, {
+    const res = await fetch(CHAT_ENDPOINT, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${groqApiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: chatHistory,
-        temperature: 0.7,
-        max_tokens: 200,
-        reasoning_effort: 'none',
-        reasoning_format: 'hidden'
+        messages: chatHistory
       })
     });
 
@@ -3096,18 +3069,43 @@ chatInput.addEventListener('keydown', (e) => {
   }
 });
 
-setKeyStatus();
-
 // ---------- QR code: scan to open on phone (self-contained, no network fetch) ----------
 (function setupQr() {
   const pageUrl = window.location.href;
   document.getElementById('qr-url').textContent = pageUrl;
+
+  const isFileProtocol = window.location.protocol === 'file:';
+  const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const qrNote = document.getElementById('qr-note');
+
+  if (isFileProtocol) {
+    // A file:// URL is only reachable on this machine — a QR code for it
+    // would be pointless, so skip generating one and explain instead.
+    document.getElementById('qr-canvas-wrap').innerHTML =
+      '<div style="color:#0a0d12;font-family:var(--sans);font-size:11.5px;padding:16px 10px;line-height:1.5;text-align:left;">' +
+      '<strong>No live URL yet.</strong><br>This page is open as a local file, ' +
+      'which only this computer can see.<br><br>' +
+      'Run <code style="background:#eee;padding:1px 4px;border-radius:3px;">python3 file2.py</code> ' +
+      '(included alongside this file), then open the address it prints ' +
+      'and click Scan on Phone again.' +
+      '</div>';
+    qrNote.textContent = 'Waiting for this page to be served on your local network.';
+    document.getElementById('qr-url').textContent = '';
+    return;
+  }
 
   try {
     const qr = qrcode(0, 'M'); // typeNumber 0 = auto-size
     qr.addData(pageUrl);
     qr.make();
     document.getElementById('qr-canvas-wrap').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 4 });
+
+    if (isLocalhost) {
+      // localhost / 127.0.0.1 also only resolves on this machine
+      qrNote.textContent = "This address is localhost, which only this computer can reach. Use the LAN address file2.py prints instead so your phone can reach it.";
+    } else {
+      qrNote.textContent = 'Scan with your phone\u2019s camera to open this page.';
+    }
   } catch (e) {
     console.error('QR generation failed:', e);
     document.getElementById('qr-canvas-wrap').innerHTML =
