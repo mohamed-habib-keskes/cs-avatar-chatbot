@@ -2958,7 +2958,7 @@ const QA_PAIRS = [
   },
   {
     match: ['what can you do', 'what do you do'],
-    reply: "Mostly hover, look cool, and answer questions. Occasionally judge your posture."
+    reply: "Mostly hover, look cool, and answer questions about IT and IEEE CS chapter. Occasionally judge your posture."
   },
   {
     match: ['why I join cs ', 'why I join your club '],
@@ -2969,12 +2969,16 @@ const QA_PAIRS = [
     reply:" CSTAM stands for Computer Society Tunisia Annual Meeting. It is the flagship congress of the IEEE Computer Society Tunisia Chapter, bringing together students, young professionals, researchers, entrepreneurs, and technology enthusiasts from across Tunisia. "
   },
   {
-    match: ['what is zerotrace  ', 'zerotrace?'],
+    match: ['what is zerotrace  ', 'zerotrace?','zerotrace'],
     reply:" ZeroTrace is a cybersecurity CTF competition that helps participants develop practical skills through challenges in areas like cryptography, web exploitation, and reverse engineering. "
   },
   {
-    match: ['what is cp  ', 'CP?',],
+    match: ['what is cp  ', 'CP?','CP'],
     reply:"CP (Competitive Programming) is a type of programming competition where participants solve algorithmic and logical problems under time constraints. "
+  },
+  {
+    match: ['events ','what are the upcoming events   '],
+    reply:" zerotrace 2.0 , cstam 3.0 "
   },
 
 
@@ -2986,6 +2990,23 @@ function findCannedReply(question) {
     const matches = Array.isArray(pair.match) ? pair.match : [pair.match];
     if (matches.some(m => q.includes(m.toLowerCase()))) {
       return pair.reply;
+    }
+  }
+  return null;
+}
+
+// Polls until the admin answers a queued question, or gives up after 5 min.
+async function pollForAnswer(id) {
+  const deadline = Date.now() + 5 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const res = await fetch(`/api/chat/poll?id=${encodeURIComponent(id)}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.resolved) return data.answer;
+    } catch (e) {
+      // transient network hiccup — keep polling
     }
   }
   return null;
@@ -3027,9 +3048,21 @@ async function askDrone(question) {
     }
 
     const data = await res.json();
-    let reply = data.choices?.[0]?.message?.content?.trim() || "…no response.";
-    // safety net: strip any leaked <think>...</think> reasoning blocks
-    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+    let reply;
+    if (data.pending) {
+      // Admin is answering this one manually — keep the bubble showing
+      // "thinking" while we poll for their reply.
+      bubbleText.textContent = data.fallback
+        ? 'Hmm, let me get a human for that one…'
+        : '···';
+      const answer = await pollForAnswer(data.id);
+      reply = answer || "…nobody picked this one up in time. Try again?";
+    } else {
+      reply = data.choices?.[0]?.message?.content?.trim() || "…no response.";
+      // safety net: strip any leaked <think>...</think> reasoning blocks
+      reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    }
     chatHistory.push({ role: 'assistant', content: reply });
 
     typewrite(reply, () => hideBubbleSoon());
