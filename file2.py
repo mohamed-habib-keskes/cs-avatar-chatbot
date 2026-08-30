@@ -29,14 +29,26 @@ import getpass
 import re
 import subprocess
 import platform
+import threading
+import uuid
 import urllib.request
 import urllib.error
+import urllib.parse
 
 PORT = 8000
 GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "qwen/qwen3.6-27b"
 
 GROQ_API_KEY = "7ot il api key"  # set in main() before the server starts
+
+# ---------- Admin hand-off ----------
+# When admin_mode is on, new questions are queued here instead of being
+# sent to Groq, and the admin.html page polls/answers them. Questions
+# also land here automatically if the Groq call itself fails, so a
+# visitor never just sees an error.
+pending_lock = threading.Lock()
+pending_questions = {}  # id -> {"question": str, "answer": str|None, "resolved": bool}
+admin_mode = {"enabled": False}
 
 
 VIRTUAL_ADAPTER_HINTS = [
@@ -188,7 +200,60 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # keep the console clean
 
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+
+        if parsed.path == "/api/chat/poll":
+            self._handle_poll(parsed.query)
+            return
+
+        if parsed.path == "/api/admin/pending":
+            with pending_lock:
+                items = [
+                    {"id": qid, "question": v["question"]}
+                    for qid, v in pending_questions.items()
+                    if not v["resolved"]
+                ]
+            self._send_json(200, {"pending": items, "admin_mode": admin_mode["enabled"]})
+            return
+
+        if parsed.path == "/api/admin/mode":
+            self._send_json(200, {"enabled": admin_mode["enabled"]})
+            return
+
+        super().do_GET()
+
+    def _handle_poll(self, query):
+        qid = (urllib.parse.parse_qs(query).get("id") or [""])[0]
+        with pending_lock:
+            entry = pending_questions.get(qid)
+            if entry is None:
+                self._send_json(404, {"error": "Unknown question id."})
+                return
+            if entry["resolved"]:
+                self._send_json(200, {"resolved": True, "answer": entry["answer"]})
+            else:
+                self._send_json(200, {"resolved": False})
+
+    def _enqueue_pending(self, messages):
+        """Store a question for the admin panel and return its id."""
+        question = ""
+        for m in reversed(messages):
+            if m.get("role") == "user":
+                question = m.get("content", "")
+                break
+        qid = uuid.uuid4().hex[:8]
+        with pending_lock:
+            pending_questions[qid] = {"question": question, "answer": None, "resolved": False}
+        return qid
+
     def do_POST(self):
+        if self.path == "/api/admin/answer":
+            self._handle_admin_answer()
+            return
+        if self.path == "/api/admin/mode":
+            self._handle_admin_mode()
+            return
         if self.path != "/api/chat":
             self.send_error(404, "Not found")
             return
@@ -211,6 +276,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         messages = body.get("messages")
         if not messages:
             self._send_json(400, {"error": "Missing 'messages' in request."})
+            return
+
+        # Admin is handling questions manually right now — queue this one
+        # for admin.html instead of calling Groq.
+        if admin_mode["enabled"]:
+            qid = self._enqueue_pending(messages)
+            self._send_json(200, {"pending": True, "id": qid})
             return
 
         payload = json.dumps({
@@ -249,10 +321,45 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except urllib.error.HTTPError as e:
             err_body = e.read()
             print(f"[groq error] {e.code}: {err_body[:300]!r}")
-            self._send_raw(e.code, err_body)
+            # Groq couldn't handle it — hand it to the admin panel instead
+            # of showing the visitor an error.
+            qid = self._enqueue_pending(messages)
+            self._send_json(200, {"pending": True, "id": qid, "fallback": True})
         except Exception as e:
             print(f"[proxy error] {e}")
-            self._send_json(502, {"error": f"Could not reach Groq: {e}"})
+            qid = self._enqueue_pending(messages)
+            self._send_json(200, {"pending": True, "id": qid, "fallback": True})
+
+    def _handle_admin_answer(self):
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except Exception:
+            self._send_json(400, {"error": "Malformed request body."})
+            return
+        qid = body.get("id")
+        answer = (body.get("answer") or "").strip()
+        if not qid or not answer:
+            self._send_json(400, {"error": "Missing 'id' or 'answer'."})
+            return
+        with pending_lock:
+            entry = pending_questions.get(qid)
+            if entry is None:
+                self._send_json(404, {"error": "Unknown question id."})
+                return
+            entry["answer"] = answer
+            entry["resolved"] = True
+        self._send_json(200, {"ok": True})
+
+    def _handle_admin_mode(self):
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except Exception:
+            self._send_json(400, {"error": "Malformed request body."})
+            return
+        admin_mode["enabled"] = bool(body.get("enabled"))
+        self._send_json(200, {"enabled": admin_mode["enabled"]})
 
     def _send_json(self, status, obj):
         self._send_raw(status, json.dumps(obj).encode("utf-8"))
@@ -327,6 +434,9 @@ def main():
         print("  Then click 'SCAN ON PHONE' inside the page — any number")
         print("  of phones on the same WiFi can scan it, chat, and load")
         print("  the model at the same time, without ever needing a key.")
+        print()
+        print("  To answer questions yourself, open the admin panel:")
+        print(f"    http://{lan_ip}:{port}/admin.html")
 
         interfaces = list_network_interfaces()
         classified = [(name, ip, classify_adapter(name)) for name, ip in interfaces]
