@@ -1,73 +1,196 @@
-# 🤖 CS ChatBot
+# 🤖 CS Avatar Chatbot
 
-An interactive AI-powered chatbot featuring a **3D animated robot assistant** with dynamic movements, facial expressions, and interactive animations.
+An interactive AI-powered chatbot featuring a **3D animated robot assistant** with dynamic movements, facial expressions, voice interaction, and intelligent conversational capabilities.
+
+This project was initially based on an existing frontend concept and was significantly extended with a custom backend architecture, improved LLM integration, intelligent response handling, and additional interactive features.
 
 ## ✨ Features
 
-* 🤖 Interactive 3D robot assistant
-* 💬 AI-powered chatbot
-* 🎭 Dynamic facial expressions and reactions
-* 🔄 Head-to-full-body transformation animation
-* 🧠 Thinking animation while processing questions
+* 🤖 Interactive 3D animated robot assistant
+* 💬 AI-powered conversational chatbot
+* 🧠 Advanced LLM integration using Groq
+* ⚡ Python backend for secure API communication
+* 🎭 Dynamic facial expressions and robot reactions
+* 💭 Thinking animation while processing responses
+* 🗨️ Animated speech bubbles synchronized with conversations
+* 🔊 Voice interaction capabilities
 * 👀 Natural robot movements and interactions
+* 🔄 Head-to-full-body transformation animation
+* 📱 QR code connectivity for mobile devices
+* 🌐 Local network access for multiple users
+* 🛡️ Secure API key handling through the backend
+* 👨‍💼 Admin fallback system for unanswered questions
 * 🎨 Modern futuristic interface
-* 📱 Responsive user interface
+* 📱 Responsive design for desktop and mobile
 
 ## 🛠️ Technologies
+
+### Frontend
 
 * HTML5
 * CSS3
 * JavaScript
-* 3D Animation
-* AI / LLM API
+* Three.js / 3D Animation
+
+### Backend
+
+* Python
+* HTTP Server
+* REST API Architecture
+
+### Artificial Intelligence
+
+* Groq API
+* Large Language Models (LLMs)
+* Intelligent response routing
 
 ## 📂 Project Structure
 
 ```text
 CS-ChatBot/
-├── index.html
+│
+├── index.html              # Main chatbot interface
+├── admin.html              # Admin interface
+├── server.py               # Python backend server
+│
 ├── js/
-│   └── aiService.js
+│   ├── app.js              # Main application logic
+│   ├── chat.js             # Chat functionality
+│   ├── aiService.js        # AI / LLM integration
+│   ├── robot.js            # Robot animations
+│   ├── voice.js            # Voice interaction
+│   ├── input.js            # User input handling
+│   └── message.js          # Message rendering
+│
 ├── css/
+│   └── styles.css
+│
 ├── assets/
-├── README.md
-└── .gitignore
+│   └── cs.png
+│
+├── canned_qa.json          # Predefined questions and answers
+│
+└── README.md
 ```
 
 ## 🚀 Getting Started
 
-### 1. Launch with Python Server (Recommended)
+### Prerequisites
 
-Run the secure local backend server:
+Make sure Python is installed on your system.
+
+You will also need a Groq API key.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/mohamed-habib-keskes/cs-avatar-chatbot.git
+cd cs-avatar-chatbot
+```
+
+### 2. Start the Backend Server
+
+Run:
 
 ```bash
 python server.py
 ```
 
-- When prompted, paste your **Groq API key** (free at [console.groq.com/keys](https://console.groq.com/keys)), or press Enter to run in Admin-only mode.
-- The server will automatically detect your WiFi network and print your LAN URL:
-  - Open on computer: `http://localhost:8000/index.html`
-  - Admin panel: `http://localhost:8000/admin.html`
-- Click **📱 SCAN QR** in the top header to let any phone on the same WiFi scan and chat immediately without ever needing an API key!
+The backend server handles communication between the frontend and the LLM API.
 
-### 2. Standalone Browser Mode
+### 3. Open the Application
 
-Open `index.html` directly in your browser. Configure your Google Gemini API key in `index.html` (`window.GEMINI_API_KEY`) if running without `server.py`.
+Once the server starts, open:
 
-## 🎮 Interaction
+```text
+http://localhost:8000/index.html
+```
 
-Click on the robot to switch between:
+### 📱 Mobile Access
 
-**Head → Full Body → Head**
+The application can also be accessed from a mobile phone connected to the same WiFi network.
 
-The robot also reacts dynamically to user interactions with different movements and expressions.
+Use the integrated QR code feature to quickly connect a mobile device to the chatbot.
+
+## 🧠 How It Works
+
+The chatbot follows an intelligent response flow:
+
+```text
+User
+  ↓
+3D Chatbot Interface
+  ↓
+Python Backend
+  ↓
+LLM Processing
+  ↓
+Intelligent Response
+  ↓
+Robot Animation + Speech Bubble
+```
+
+When the AI is processing a request, the robot displays dynamic thinking animations. Once a response is generated, the robot reacts and displays the answer through the interactive interface.
+
+## 👨‍💼 Admin Fallback System
+
+If the chatbot cannot provide an appropriate answer, the request can be redirected to an administrator.
+
+This allows the system to combine:
+
+* 🤖 Automated AI responses
+* 👨‍💼 Human assistance when necessary
 
 ## 🔐 Security
 
-API keys and other sensitive credentials should never be committed to the repository. Use environment variables and keep `.env` in `.gitignore`.
+API keys should **never be exposed directly in frontend code or committed to GitHub**.
 
-## 👨‍💻 Author
+For production usage, sensitive credentials should be stored using environment variables:
 
-**Ahmed Aziz Hssairi**
+```text
+.env
+```
 
-Computer Science Engineering Student
+Make sure to add sensitive files to `.gitignore`:
+
+```gitignore
+.env
+__pycache__/
+*.pyc
+```
+
+## 🎮 Interaction
+
+Users can interact directly with the animated robot.
+
+The robot can:
+
+* Change facial expressions
+* Display thinking animations
+* React while speaking
+* Transform between different visual states
+* Respond dynamically to user interactions
+
+## 🚧 Future Improvements
+
+* [ ] Conversation memory
+* [ ] RAG integration with custom knowledge bases
+* [ ] Multiple language support
+* [ ] Improved voice recognition
+* [ ] Text-to-speech synchronization
+* [ ] User authentication
+* [ ] Cloud deployment
+* [ ] Analytics dashboard
+* [ ] Advanced admin dashboard
+
+## 🙏 Credits
+
+The project was initially inspired by and built upon an existing frontend implementation. The system was further developed and extended with additional backend functionality, AI integration, security improvements, intelligent response handling, and interactive features.
+
+## 👨‍💻 Developer
+
+**Mohamed Habib Keskes**
+
+Computer Science Engineering Student at ENIS
+
+Passionate about **Artificial Intelligence, Cybersecurity, Cloud Computing, and Intelligent Systems**.
