@@ -1,0 +1,45 @@
+[
+  {
+    "id": "q1",
+    "match": [
+      "who are you",
+      "what is your name",
+      "what's your name"
+    ],
+    "reply": "I am CS-BOT ⚡, the official AI assistant of IEEE ENIS Computer Society Student Branch Chapter!"
+  },
+  {
+    "id": "q2",
+    "match": [
+      "why join cs",
+      "why should i join",
+      "why join ieee cs"
+    ],
+    "reply": "Joining IEEE ENIS CS SBC gives you real-world tech project experience, bootcamps (AI, Web, Cyber, Cloud), global networking, and competitive edge for your future engineering career!"
+  },
+  {
+    "id": "q3",
+    "match": [
+      "cstam",
+      "what is cstam"
+    ],
+    "reply": "CSTAM (Computer Society Tunisia Annual Meeting) is the premier flagship congress uniting tech students, researchers, and tech leaders across Tunisia."
+  },
+  {
+    "id": "q4",
+    "match": [
+      "zerotrace",
+      "what is zerotrace"
+    ],
+    "reply": "ZeroTrace is our flagship cybersecurity CTF competition, featuring challenges in cryptography, reverse engineering, web exploitation, and network security."
+  },
+  {
+    "id": "q5",
+    "match": [
+      "events",
+      "activities",
+      "upcoming events"
+    ],
+    "reply": "We organize Welcome Days, ZeroTrace CTF, CSTAM, hands-on workshops in AI and Web, TCPC coding challenges, and IEEEXtreme training!"
+  }
+]

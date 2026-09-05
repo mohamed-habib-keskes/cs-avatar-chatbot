@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS-BOT — IEEE ENIS CS SBC Admin</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 20px 60px;
+    background: #08080f;
+    color: #dfe6ee;
+    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  .header-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 6px;
+  }
+  .logo-img {
+    height: 42px;
+    width: auto;
+    background: #fff;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  h1 {
+    font-size: 16px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #FF7A00;
+    margin: 0;
+  }
+  .sub { color: #8888aa; font-size: 12.5px; margin-bottom: 22px; line-height: 1.5; }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #121224;
+    border: 1px solid rgba(255, 122, 0, 0.3);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    font-size: 13px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+  }
+  .toggle-row input { transform: scale(1.35); accent-color: #FF7A00; cursor: pointer; }
+  .card {
+    background: #121224;
+    border: 1px solid #232342;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .q { font-size: 14px; line-height: 1.5; color: #f0f0ff; margin-bottom: 12px; }
+  .q::before { content: "Q: "; color: #FF7A00; font-weight: bold; }
+  textarea {
+    width: 100%;
+    min-height: 72px;
+    background: #090914;
+    color: #f0f0ff;
+    border: 1px solid #2d2d54;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+  }
+  textarea:focus { outline: none; border-color: #FF7A00; box-shadow: 0 0 10px rgba(255, 122, 0, 0.25); }
+  button {
+    margin-top: 10px;
+    background: linear-gradient(135deg, #FF7A00, #E56900);
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 18px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12.5px;
+    transition: all 0.2s ease;
+  }
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid #232342;
+    padding-bottom: 12px;
+  }
+  .tab-btn {
+    background: transparent;
+    border: 1px solid #232342;
+    color: #8888aa;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-top: 0;
+  }
+  .tab-btn:hover {
+    color: #fff;
+    border-color: rgba(255, 122, 0, 0.5);
+  }
+  .tab-btn.active {
+    background: rgba(255, 122, 0, 0.15);
+    color: #FF7A00;
+    border-color: #FF7A00;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .form-box {
+    background: #121224;
+    border: 1.5px solid rgba(255, 122, 0, 0.35);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .form-box h3 {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: #FF7A00;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .input-label {
+    display: block;
+    font-size: 12px;
+    color: #a0a0c0;
+    margin-bottom: 6px;
+  }
+  .text-input {
+    width: 100%;
+    background: #090914;
+    color: #f0f0ff;
+    border: 1px solid #2d2d54;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    margin-bottom: 14px;
+    transition: border-color 0.2s ease;
+  }
+  .text-input:focus {
+    outline: none;
+    border-color: #FF7A00;
+    box-shadow: 0 0 10px rgba(255, 122, 0, 0.25);
+  }
+  .canned-item {
+    background: #121224;
+    border: 1px solid #232342;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .canned-details { flex: 1; }
+  .canned-keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .badge-keyword {
+    background: rgba(255, 122, 0, 0.12);
+    border: 1px solid rgba(255, 122, 0, 0.3);
+    color: #FF9A3C;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11.5px;
+  }
+  .canned-reply {
+    color: #dfe6ee;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .delete-btn {
+    background: #2b1111;
+    border: 1px solid #552222;
+    color: #ff6666;
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 0;
+  }
+  .delete-btn:hover {
+    background: #441818;
+    color: #ff8888;
+  }
+</style>
+</head>
+<body>
+  <div class="header-wrap">
+    <img src="assets/cs.png" alt="IEEE ENIS CS Logo" class="logo-img" onerror="this.style.display='none'">
+    <h1>CS-BOT — Control Center</h1>
+  </div>
+  <div class="sub">Manage instant questions & answers, or answer live queries from visitors and phone scans.</div>
+
+  <!-- Tabs Navigation -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('canned-tab')">📝 Custom Questions & Answers</button>
+    <button class="tab-btn" onclick="switchTab('live-tab')">💬 Live Questions Queue <span id="pending-count-badge"></span></button>
+  </div>
+
+  <!-- TAB 1: Canned Q&A Manager -->
+  <div id="canned-tab" class="tab-content active">
+    <div class="form-box">
+      <h3>➕ Add / Update Question & Response</h3>
+      <label class="input-label">Keywords or Trigger Questions (comma separated):</label>
+      <input type="text" id="canned-keywords" class="text-input" placeholder="e.g. registration, how to register, signup, where to join" />
+
+      <label class="input-label">Robot Answer / Response:</label>
+      <textarea id="canned-reply" placeholder="Type the exact reply CS-BOT will say when triggered…"></textarea>
+
+      <button id="canned-save-btn">💾 Save Question & Response</button>
+    </div>
+
+    <h2 style="font-size: 14px; text-transform: uppercase; color: #8888aa; margin: 24px 0 12px; letter-spacing: 0.06em;">Configured Q&A List</h2>
+    <div id="canned-list"><div class="empty">Loading questions…</div></div>
+  </div>
+
+  <!-- TAB 2: Live Pending Questions (Human Handoff) -->
+  <div id="live-tab" class="tab-content">
+    <div class="toggle-row">
+      <input type="checkbox" id="admin-toggle">
+      <label for="admin-toggle">Hold new questions for human answer (Admin Hold Mode)</label>
+    </div>
+
+    <div id="list"><div class="empty">No pending questions.</div></div>
+  </div>
+
+<script>
+// --- Tab Switching ---
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  if (tabId === 'canned-tab') {
+    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+    document.getElementById('canned-tab').classList.add('active');
+    loadCannedList();
+  } else {
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    document.getElementById('live-tab').classList.add('active');
+    refresh();
+  }
+}
+
+// --- Canned Q&A Logic ---
+const cannedListEl = document.getElementById('canned-list');
+const keywordsInput = document.getElementById('canned-keywords');
+const replyInput = document.getElementById('canned-reply');
+const cannedSaveBtn = document.getElementById('canned-save-btn');
+
+async function loadCannedList() {
+  try {
+    const res = await fetch('/api/canned');
+    const data = await res.json();
+    const items = data.canned || [];
+
+    if (!items.length) {
+      cannedListEl.innerHTML = '<div class="empty">No custom questions added yet. Add one above!</div>';
+      return;
+    }
+
+    cannedListEl.innerHTML = '';
+    items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'canned-item';
+
+      const matches = Array.isArray(item.match) ? item.match : [item.match];
+      const badgesHtml = matches.map(m => `<span class="badge-keyword">${escapeHtml(m)}</span>`).join('');
+
+      el.innerHTML = `
+        <div class="canned-details">
+          <div class="canned-keywords">${badgesHtml}</div>
+          <div class="canned-reply">${escapeHtml(item.reply)}</div>
+        </div>
+        <button class="delete-btn" title="Delete Question">🗑️ Remove</button>
+      `;
+
+      el.querySelector('.delete-btn').addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to delete this canned question?')) return;
+        try {
+          await fetch('/api/canned/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: item.id })
+          });
+          loadCannedList();
+        } catch (e) {
+          alert('Failed to delete question');
+        }
+      });
+
+      cannedListEl.appendChild(el);
+    });
+  } catch (e) {
+    cannedListEl.innerHTML = '<div class="empty">Error loading questions. Ensure server.py is running.</div>';
+  }
+}
+
+cannedSaveBtn.addEventListener('click', async () => {
+  const rawKeywords = keywordsInput.value.trim();
+  const reply = replyInput.value.trim();
+
+  if (!rawKeywords || !reply) {
+    alert('Please enter trigger keywords/questions and the answer.');
+    return;
+  }
+
+  cannedSaveBtn.disabled = true;
+  cannedSaveBtn.textContent = 'Saving…';
+
+  try {
+    const matches = rawKeywords.split(',').map(s => s.trim()).filter(Boolean);
+    const res = await fetch('/api/canned/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ match: matches, reply })
+    });
+
+    if (res.ok) {
+      keywordsInput.value = '';
+      replyInput.value = '';
+      loadCannedList();
+    } else {
+      const err = await res.json();
+      alert('Error saving: ' + (err.error || 'Server error'));
+    }
+  } catch (e) {
+    alert('Could not save question: ' + e.message);
+  } finally {
+    cannedSaveBtn.disabled = false;
+    cannedSaveBtn.textContent = '💾 Save Question & Response';
+  }
+});
+
+// --- Live Queue & Admin Mode Logic ---
+const listEl = document.getElementById('list');
+const toggle = document.getElementById('admin-toggle');
+const pendingBadge = document.getElementById('pending-count-badge');
+let editing = new Set(); // ids currently being typed into — don't blow away the textarea on refresh
+
+toggle.addEventListener('change', async () => {
+  await fetch('/api/admin/mode', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: toggle.checked })
+  });
+});
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function refresh() {
+  let data;
+  try {
+    const res = await fetch('/api/admin/pending');
+    data = await res.json();
+  } catch (e) {
+    return; // transient error — try again on the next tick
+  }
+
+  toggle.checked = !!data.admin_mode;
+
+  if (pendingBadge) {
+    const count = data.pending ? data.pending.length : 0;
+    pendingBadge.textContent = count > 0 ? `(${count})` : '';
+    pendingBadge.style.color = count > 0 ? '#00E676' : '';
+  }
+
+  if (!data.pending.length) {
+    listEl.innerHTML = '<div class="empty">No pending questions.</div>';
+    editing.clear();
+    return;
+  }
+
+  // Don't touch cards the admin is currently typing an answer into.
+  const currentIds = new Set(data.pending.map(p => p.id));
+  for (const id of [...editing]) if (!currentIds.has(id)) editing.delete(id);
+
+  for (const item of data.pending) {
+    if (editing.has(item.id)) continue;
+    if (document.getElementById('card-' + item.id)) continue;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'card-' + item.id;
+    card.innerHTML = `
+      <div class="q">${escapeHtml(item.question)}</div>
+      <textarea placeholder="Type the reply CS-BOT will say to the visitor…"></textarea>
+      <br><button>Send reply</button>
+    `;
+    const textarea = card.querySelector('textarea');
+    const btn = card.querySelector('button');
+    textarea.addEventListener('focus', () => editing.add(item.id));
+    textarea.addEventListener('input', () => editing.add(item.id));
+
+    btn.addEventListener('click', async () => {
+      const answer = textarea.value.trim();
+      if (!answer) return;
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      try {
+        await fetch('/api/admin/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.id, answer })
+        });
+      } finally {
+        editing.delete(item.id);
+        card.remove();
+      }
+    });
+
+    listEl.appendChild(card);
+  }
+
+  // Remove cards for questions that are no longer pending (answered elsewhere).
+  for (const child of [...listEl.children]) {
+    const id = child.id?.replace('card-', '');
+    if (id && !currentIds.has(id)) child.remove();
+  }
+  if (!listEl.children.length) {
+    listEl.innerHTML = '<div class="empty">No pending questions.</div>';
+  }
+}
+
+(async function init() {
+  try {
+    const res = await fetch('/api/admin/mode');
+    const data = await res.json();
+    toggle.checked = !!data.enabled;
+  } catch (e) {}
+  loadCannedList();
+  refresh();
+  setInterval(refresh, 2500);
+})();
+</script>
+</body>
+</html>
